@@ -15,21 +15,28 @@
 	2011-08-08 	http://www.markjacobsen.net		Implemented msgId arguments
 												Added getMsgId() for default msgId value
 												Added logIt() method - user needs to implement
+	2012-08-06 	http://www.markjacobsen.net 	No longer MD5ing the email
+	2012-08-07 	http://www.markjacobsen.net 	Added protocol option
 	--->
 	
 	<!---
-	Set these 2 values to your defaults. You can instantiate different instances
-	with different values via the init(key, secret) method
+	Set these 2 API values to your defaults. You can instantiate different instances
+	with different values via the init(key, secret, protocol) method
 	--->
 	<cfset THIS.sApiKey = "" />
 	<cfset THIS.sApiSecret = "" />
+	<cfset THIS.sProtocol = "http" />
 	
 	
 	<cffunction name="init" access="public" output="false" returntype="boxcar">
-		<cfargument name="apiKey" type="string" required="false" default="#THIS.sApiKey#" />
-		<cfargument name="apiSecret" type="string" required="false" default="#THIS.sApiSecret#" />
+		<cfargument name="apiKey" 		type="string" required="false" default="#THIS.sApiKey#" />
+		<cfargument name="apiSecret" 	type="string" required="false" default="#THIS.sApiSecret#" />
+		<cfargument name="protocol" 	type="string" required="false" default="#THIS.sProtocol#" />
+		
 		<cfset THIS.sApiKey = ARGUMENTS.apiKey />
 		<cfset THIS.sApiSecret = ARGUMENTS.apiSecret />
+		<cfset THIS.sProtocol = ARGUMENTS.protocol />
+		
 		<cfreturn THIS />
 	</cffunction>
 	
@@ -45,8 +52,8 @@
 	<cffunction name="subscribe" access="public" output="false" returntype="boolean">
 		<cfargument name="email" type="string" required="true" />
 		
-		<cfhttp method="post" url="https://boxcar.io/devices/providers/#THIS.sApiKey#/notifications/subscribe">
-			<cfhttpparam name="email" value="#getMd5String(ARGUMENTS.email)#" type="formfield" />
+		<cfhttp method="post" url="#THIS.sProtocol#://boxcar.io/devices/providers/#THIS.sApiKey#/notifications/subscribe">
+			<cfhttpparam name="email" value="#ARGUMENTS.email#" type="formfield" />
 		</cfhttp>
 		
 		<cfset rc = logIt("subscribe(#ARGUMENTS.email#) returned #CFHTTP.StatusCode#", "subscribe") />
@@ -66,8 +73,8 @@
 		<cfargument name="url" 		type="string" 	required="false" 	default="" />
 		<cfargument name="msgId" 	type="numeric" 	required="false" 	default="#getMsgId()#" />
 		
-		<cfhttp method="post" url="https://boxcar.io/devices/providers/#THIS.sApiKey#/notifications">
-			<cfhttpparam name="email" value="#getMd5String(ARGUMENTS.email)#" type="formfield" />
+		<cfhttp method="post" url="#THIS.sProtocol#://boxcar.io/devices/providers/#THIS.sApiKey#/notifications">
+			<cfhttpparam name="email" value="#ARGUMENTS.email#" type="formfield" />
 			<cfhttpparam name="notification[from_screen_name]" value="#ARGUMENTS.from#" type="formfield" />
 			<cfhttpparam name="notification[message]" value="#ARGUMENTS.msg#" type="formfield" />
 			<cfhttpparam name="notification[from_remote_service_id]" value="#ARGUMENTS.msgId#" type="formfield" />
@@ -92,7 +99,7 @@
 		<cfargument name="url" 		type="string" 	required="false" 	default="" />
 		<cfargument name="msgId" 	type="numeric" 	required="false" 	default="#getMsgId()#" />
 		
-		<cfhttp method="post" url="https://boxcar.io/devices/providers/#THIS.sApiKey#/notifications/broadcast">
+		<cfhttp method="post" url="#THIS.sProtocol#://boxcar.io/devices/providers/#THIS.sApiKey#/notifications/broadcast">
 			<cfhttpparam name="secret" value="#THIS.sApiSecret#" type="formfield" />
 			<cfhttpparam name="notification[from_screen_name]" value="#ARGUMENTS.from#" type="formfield" />
 			<cfhttpparam name="notification[message]" value="#ARGUMENTS.msg#" type="formfield" />
@@ -109,14 +116,6 @@
 		<cfelse>
 			<cfreturn FALSE />
 		</cfif>
-	</cffunction>
-	
-	
-	<cffunction name="getMd5String" access="private" output="false" returntype="string">
-		<cfargument name="str" type="string" required="true" />
-		<cfset VARIABLES.sMd5 = LCase(hash(ARGUMENTS.str, "MD5")) />
-		<cfset rc = logIt("Returning #VARIABLES.sMd5#", "getMd5String") />
-		<cfreturn VARIABLES.sMd5 />
 	</cffunction>
 	
 	<cffunction name="getMsgId" access="private" output="false" returntype="numeric">
